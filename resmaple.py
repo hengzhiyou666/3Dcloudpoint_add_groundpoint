@@ -4,15 +4,59 @@ from typing import Optional
 
 import numpy as np
 
+# 命令行执行该py时，传入的参数
+def parse_args(argv: Optional[list] = None):
+    """
+    解析命令行参数。终端执行「python3 resmaple.py」时，未传入的选项使用本函数内
+    add_argument(..., default=...) 的默认值（如 --grid-step、--max-gap 等）。
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="使用 Open3D 对点云进行『补地面点』上采样（默认处理 demo2_outdoor.pcd）"
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        default="demo2_outdoor_calibrated.pcd",
+        help="输入 PCD/PLY 文件路径（默认: demo2_outdoor_calibrated.pcd）",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="demo2_outdoor_upsampled.pcd",
+        help="输出点云文件路径（默认: demo2_outdoor_upsampled.pcd）",
+    )
+    parser.add_argument(
+        "--grid-step",
+        type=float,
+        default=0.02,
+        help="地面虚拟格点间距 (m)，越小地面越密集（默认: 0.02）",
+    )
+    parser.add_argument(
+        "--max-gap",
+        type=float,
+        default=1.2,
+        help="判断格点是否在可信地面附近的最大距离 (m)（默认: 1.2）",
+    )
+
+    return parser.parse_args(argv)
+
 
 def upsample_ground_with_open3d(
     input_pcd_path: str,
     output_pcd_path: str,
-    grid_step: float = 0.1,
-    max_gap: float = 0.6,
+    grid_step: float = 0.02,#其他py调用时，使用该默认值
+    max_gap: float = 1.2,#其他py调用时，使用该S默认值
 ) -> None:
     """
     重点「补地面点」的上采样方案（基于 Open3D），更贴合路径规划需求。
+
+    默认参数说明：
+      - grid_step、max_gap 的默认值（上方的函数签名）：仅在「其他 Python 文件
+        直接调用本函数且不传 grid_step/max_gap」时生效。
+      - 终端通过「python resmaple.py」调用时，实际使用的是 parse_args() 里
+        的默认值（与上述保持一致则行为一致）。
 
     思路：
       1. 用 RANSAC 从全局点云里分割出主地面平面（假设近似水平）；
@@ -118,40 +162,6 @@ def upsample_ground_with_open3d(
     print(f"上采样完成，原始点数: {len(pcd.points)}, "
           f"补点后总点数: {len(merged.points)}")
     print(f"已保存补地面点云到: {output_pcd_path}")
-
-
-def parse_args(argv: Optional[list] = None):
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="使用 Open3D 对点云进行『补地面点』上采样（默认处理 demo2_outdoor.pcd）"
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
-        default="demo2_outdoor_calibrated.pcd",
-        help="输入 PCD/PLY 文件路径（默认: demo2_outdoor_calibrated.pcd）",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        default="demo2_outdoor_upsampled.pcd",
-        help="输出点云文件路径（默认: demo2_outdoor_upsampled.pcd）",
-    )
-    parser.add_argument(
-        "--grid-step",
-        type=float,
-        default=0.1,
-        help="地面虚拟格点间距 (m)，越小地面越密集（默认: 0.1）",
-    )
-    parser.add_argument(
-        "--max-gap",
-        type=float,
-        default=0.6,
-        help="判断格点是否在可信地面附近的最大距离 (m)（默认: 0.6）",
-    )
-
-    return parser.parse_args(argv)
 
 
 def main(argv: Optional[list] = None) -> None:
